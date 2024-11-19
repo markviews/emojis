@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "340183324364",
+    "project_id": "emojis-f3a0c",
+    "storage_bucket": "emojis-f3a0c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:340183324364:android:698aa3aeda7e6db47d5469",
+        "android_client_info": {
+          "package_name": "com.example.customemojikeyboard"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCsjuM69HC5x61h_qmBpgHYuC4BjOsCr-g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
