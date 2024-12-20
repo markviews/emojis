@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 let ShowNotificationInternal: (str: string, duration?: number) => void;
 
@@ -12,28 +12,38 @@ export function ShowNotification(str: string, duration?: number) {
 
 export default function Notification() {
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const [notificationText, setNotification] = useState("");
-    const isVisible = notificationText !== "";
+    const [notificationText, setNotification] = useState<string | null>(null);
+
+    useEffect(() => {
+        return () => {
+            // Clear timeout on unmount
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+        };
+    }, []);
 
     ShowNotificationInternal = (message: string, duration: number = 1000) => {
         setNotification(message);
 
-        // clear timeout
+        // Clear timeout
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
         }
 
-        // hide notification after duration
+        // Hide notification after duration
         timeoutRef.current = setTimeout(() => {
-            setNotification("");
+            setNotification(null); // Set to null to completely remove from DOM
         }, duration);
     };
 
-    // apply animation based on visibility
+    // Do not render anything if notificationText is null
+    if (!notificationText) {
+        return null;
+    }
+
     return (
-        <div
-            className={`notification ${isVisible ? "notification-show" : "notification-hide"}`}
-        >
+        <div className="notification notification-show">
             {notificationText}
         </div>
     );

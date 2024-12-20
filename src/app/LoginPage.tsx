@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import './LoginPage.css';
 import { IoInformationCircleOutline } from "react-icons/io5";
 import { auth, errorToString } from './firebase';
@@ -38,7 +38,7 @@ function Signin(email: string, password: string, setError: (state: string) => vo
         return;
     }
 
-    signInWithEmailAndPassword(auth, email, password).then((userCredential) => {
+    signInWithEmailAndPassword(auth, email, password).then(() => {
         
     }).catch((error) => {
         setError(errorToString(error.code));
@@ -98,6 +98,7 @@ function LoginBox({ setState }: { setState: (state: string) => void }) {
                 >
                     Log In
                 </button>
+                    {/* google login button   */}
             <div className="text-center mt-6 text-sm text-gray-400">
                 Need an account? <a onClick={() => setState('signup')} className="text-indigo-400 hover:underline"  >Sign up</a>
             </div>

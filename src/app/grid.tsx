@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { functions, db, auth } from './firebase';
-import { httpsCallable } from "firebase/functions";
+import { db, auth } from './firebase';
 import { ShowNotification } from "./notification";
-import { getDoc, doc } from "firebase/firestore";
+import { getDoc, doc, updateDoc } from "firebase/firestore";
 
 let ClearAddEmojiTextbox: () => void = () => { };
 
@@ -85,15 +84,45 @@ function EmojiGrid() {
         setDraggingIndex(null);
 
         // call API
-        const reorderEmojis = httpsCallable(functions, 'reorderEmojis');
-        reorderEmojis({ emojis: emojis })
-            .then((result) => {
-                ShowNotification("Saved");
-            })
-            .catch((error) => {
-                console.error('Error reordering emojis:', error);
-                // TODO show error message
-            });
+        // const reorderEmojis = httpsCallable(functions, 'reorderEmojis');
+        // reorderEmojis({ emojis: emojis })
+        //     .then(() => {
+        //         ShowNotification("Saved");
+        //     })
+        //     .catch((error) => {
+        //         console.error('Error reordering emojis:', error);
+        //         // TODO show error message
+        //     });
+
+        // update firestore
+        
+        const reorderFirestore = async (emojis: string[]) => {
+            try {
+                const user = auth.currentUser;
+                if (!user) {
+                    console.error('No user found!');
+                    return;
+                }
+    
+                const userDoc = await getDoc(doc(db, "userdata", user.uid));
+                if (!userDoc.exists()) {
+                    console.error('No user data found!');
+                    return;
+                }
+
+                updateDoc(doc(db, "userdata", user.uid), { emojis: emojis }).then(() => {
+                    ShowNotification("Saved");
+                });
+                
+                setEmojis(emojis); // Update state with emojis from Firestore
+
+            } catch (error) {
+                console.error('Error fetching emojis:', error);
+                // TODO: show error message
+            }
+        };
+
+        reorderFirestore(emojis);
     };
 
     const handleDropOnDelete = () => {
@@ -107,15 +136,43 @@ function EmojiGrid() {
             setEmojis(updatedEmojis);
             setDraggingIndex(null);
             
-            const deleteEmoji = httpsCallable(functions, 'removeEmojis');
-            deleteEmoji({ emojis: [emojis[draggingIndex]] }) // Send only the specific emoji to delete
-                .then(() => {
-                    ShowNotification("Saved");
-                })
-                .catch((error) => {
-                    console.error('Error deleting emoji:', error);
-                    // TODO show error message
-                });
+            // const deleteEmoji = httpsCallable(functions, 'removeEmojis');
+            // deleteEmoji({ emojis: [emojis[draggingIndex]] }) // Send only the specific emoji to delete
+            //     .then(() => {
+            //         ShowNotification("Saved");
+            //     })
+            //     .catch((error) => {
+            //         console.error('Error deleting emoji:', error);
+            //         // TODO show error message
+            //     });
+
+            const reorderFirestore = async (emojis: string[]) => {
+                try {
+                    const user = auth.currentUser;
+                    if (!user) {
+                        console.error('No user found!');
+                        return;
+                    }
+        
+                    const userDoc = await getDoc(doc(db, "userdata", user.uid));
+                    if (!userDoc.exists()) {
+                        console.error('No user data found!');
+                        return;
+                    }
+    
+                    updateDoc(doc(db, "userdata", user.uid), { emojis: emojis }).then(() => {
+                        ShowNotification("Saved");
+                    });
+                    
+                    setEmojis(emojis); // Update state with emojis from Firestore
+    
+                } catch (error) {
+                    console.error('Error fetching emojis:', error);
+                    // TODO: show error message
+                }
+            };
+
+            reorderFirestore(updatedEmojis);
         }
     };
 
@@ -192,7 +249,7 @@ const checkLinkValid = async (emojiID: string, fileType: string) => {
 function Click_AddEmojiButton(text: string, { emojis, setEmojis }: { emojis: any; setEmojis: (emojis: any) => void }) {
     const links = text.split(",");
 
-    var newEmojis: string[] = [];
+    const newEmojis: string[] = [];
 
     // Add each emoji to the grid
     links.forEach(async (link) => {
@@ -203,8 +260,8 @@ function Click_AddEmojiButton(text: string, { emojis, setEmojis }: { emojis: any
             return;
         }
 
-        var emojiID = "";
-        var fileType = "";
+        let emojiID = "";
+        let fileType = "";
 
         // Regular expression to capture emoji ID and file type separately (full URL, just ID.extension, or just ID)
         const regex = /(?:\/emojis\/|^)(\d+)(?:\.(\w+))?(?:\?|$)/;
@@ -236,16 +293,51 @@ function Click_AddEmojiButton(text: string, { emojis, setEmojis }: { emojis: any
     setEmojis([...emojis, ...newEmojis]);
 
     // call API
-    const addEmojis = httpsCallable(functions, 'addEmojis');
-    addEmojis({ emojis: newEmojis })
-        .then((result) => {
-            ShowNotification("Saved");
-        })
-        .catch((error) => {
-            console.error('Error adding emojis:', error);
-            // TODO show error message
-        });
+    // const addEmojis = httpsCallable(functions, 'addEmojis');
+    // addEmojis({ emojis: newEmojis })
+    //     .then(() => {
+    //         ShowNotification("Saved");
+    //     })
+    //     .catch((error) => {
+    //         console.error('Error adding emojis:', error);
+    //         // TODO show error message
+    //     });
 
+    // add emoji to firestore (avoid cold start delay / api cost)
+
+    const addEmojiFirestore = async (newEmojis: string[]) => {
+        try {
+            const user = auth.currentUser;
+            if (!user) {
+                console.error('No user found!');
+                return;
+            }
+
+            const userDoc = await getDoc(doc(db, "userdata", user.uid));
+            if (!userDoc.exists()) {
+                console.error('No user data found!');
+                return;
+            }
+
+            const data = userDoc.data() as { emojis?: string[] };
+            if (!data.emojis) {
+                // create new emojis field if it doesn't exist
+                data.emojis = [];
+            }
+
+            data.emojis.push(...newEmojis); // Add new emojis to existing list
+            updateDoc(doc(db, "userdata", user.uid), { emojis: data.emojis }).then(() => {
+                ShowNotification("Saved");
+            });
+            
+            setEmojis(data.emojis); // Update state with emojis from Firestore
+        } catch (error) {
+            console.error('Error fetching emojis:', error);
+            // TODO: show error message
+        }
+    };
+
+    addEmojiFirestore(newEmojis);
     ClearAddEmojiTextbox();
 }
 
