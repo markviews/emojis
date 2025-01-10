@@ -28,7 +28,7 @@ function EmojiGrid() {
             updateDoc(doc(db, "userdata", user.uid), { emojis: emojis }).then(() => {
                 ShowNotification("Saved");
             });
-            
+
             setEmojis(emojis); // Update state with emojis from Firestore
 
         } catch (error) {
@@ -40,7 +40,7 @@ function EmojiGrid() {
     // Fetch emojis from the server
     useEffect(() => {
         fetchEmojisFirestore();
-        
+
         // Fetch emojis using cloud functions. Not using this due to cold start delay and cost
         // const getEmojis = httpsCallable(functions, 'getEmojis');
         // getEmojis()
@@ -75,7 +75,7 @@ function EmojiGrid() {
                 console.warn('No emojis field found in user data');
                 return;
             }
-            
+
             setEmojis(data.emojis); // Update state with emojis from Firestore
         } catch (error) {
             console.error('Error fetching emojis:', error);
@@ -146,11 +146,11 @@ function EmojiGrid() {
                 console.error("Invalid draggingIndex:", draggingIndex);
                 return; // Abort operation if index is invalid
             }
-            
+
             const updatedEmojis = emojis.filter((_, index) => index !== draggingIndex);
             setEmojis(updatedEmojis);
             setDraggingIndex(null);
-            
+
             // const deleteEmoji = httpsCallable(functions, 'removeEmojis');
             // deleteEmoji({ emojis: [emojis[draggingIndex]] }) // Send only the specific emoji to delete
             //     .then(() => {
@@ -160,7 +160,7 @@ function EmojiGrid() {
             //         console.error('Error deleting emoji:', error);
             //         // TODO show error message
             //     });
-            
+
             // update firestore
             reorderFirestore(updatedEmojis);
         }
@@ -172,7 +172,7 @@ function EmojiGrid() {
             {editingIndex != -1 && <EditEmojiMenu editingIndex={editingIndex} emojis={emojis} setEmojis={setEmojis} />}
 
             <div className="emoji-grid">
-            <div
+                <div
                     className={`emoji-item ${draggingIndex !== null ? 'emoji-item-delete' : 'emoji-item-add'}`}
                     onClick={() => {
                         setEditingIndex(-1);
@@ -193,7 +193,7 @@ function EmojiGrid() {
                             className="emoji-item"
                             {...(showAddMenu ? { draggable: true } : {})}
                             onClick={() => handleEmojiClick(emoji)}
-                            onDragStart={() => { if (showAddMenu) handleDragStart(reversedIndex)}}
+                            onDragStart={() => { if (showAddMenu) handleDragStart(reversedIndex) }}
                             onDragOver={(e) => handleDragOver(e, reversedIndex)}
                             onDragEnd={handleDragEnd}
                         >
@@ -323,7 +323,7 @@ function Click_AddEmojiButton(text: string, { emojis, setEmojis }: { emojis: str
             updateDoc(doc(db, "userdata", user.uid), { emojis: data.emojis }).then(() => {
                 ShowNotification("Saved");
             });
-            
+
             setEmojis(data.emojis); // Update state with emojis from Firestore
         } catch (error) {
             console.error('Error fetching emojis:', error);
@@ -349,7 +349,7 @@ function AddEmojiMenu({ emojis, setEmojis }: { emojis: string[]; setEmojis: (emo
         <div className="addEmojiMenu">
             <h1>Add Emoji</h1>
             <span>To get an emoji&apos;s link: Right click in chat, Copy link</span>
-            <br/>
+            <br />
             <input
                 ref={emojiInputRef}
                 onChange={(e) => setEmojiText(e.target.value)}
@@ -359,11 +359,11 @@ function AddEmojiMenu({ emojis, setEmojis }: { emojis: string[]; setEmojis: (emo
             <button
                 onClick={() => Click_AddEmojiButton(emojiText, { emojis, setEmojis })}
             >Add</button>
-            
-            <br/>
-            <br/>
+
+            <br />
+            <br />
             <h1>Edit Emoji</h1>
-            <span>Drag and drop to re-order or delete</span><br/>
+            <span>Drag and drop to re-order or delete</span><br />
             <span>Click to rename</span>
         </div>
     );
