@@ -6,12 +6,22 @@ import { getDoc, doc, updateDoc } from "firebase/firestore";
 let ClearAddEmojiTextbox: () => void = () => { };
 
 function EmojiGrid() {
-    const [emojis, setEmojis] = useState<string[]>([]);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [emojis, setEmojis] = useState<{ emoji: string, name: string }[]>([]);
+    const [publicEmojis, setPublicEmojis] = useState<{ emoji: string, name: string }[]>([]);
     const [showAddMenu, setShowAddMenu] = useState(false);
     const [editingIndex, setEditingIndex] = useState(-1);
     const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
 
-    const reorderFirestore = async (emojis: string[]) => {
+    const filteredEmojis = emojis.filter((emoji) =>
+        emoji.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const filteredEmojisPublic = publicEmojis.filter((emoji) =>
+        emoji.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const reorderFirestore = async (emojis: { emoji: string, name: string }[]) => {
         try {
             const user = auth.currentUser;
             if (!user) {
@@ -30,7 +40,6 @@ function EmojiGrid() {
             });
 
             setEmojis(emojis); // Update state with emojis from Firestore
-
         } catch (error) {
             console.error('Error fetching emojis:', error);
             // TODO: show error message
@@ -40,6 +49,7 @@ function EmojiGrid() {
     // Fetch emojis from the server
     useEffect(() => {
         fetchEmojisFirestore();
+        fetchPublicEmojis();
 
         // Fetch emojis using cloud functions. Not using this due to cold start delay and cost
         // const getEmojis = httpsCallable(functions, 'getEmojis');
@@ -66,13 +76,13 @@ function EmojiGrid() {
 
             const userDoc = await getDoc(doc(db, "userdata", user.uid));
             if (!userDoc.exists()) {
-                console.error('No user data found!');
+                setEmojis([]); // Set empty array if no data found
                 return;
             }
 
-            const data = userDoc.data() as { emojis?: string[] };
+            const data = userDoc.data() as { emojis?: { emoji: string, name: string }[] };
             if (!data.emojis) {
-                console.warn('No emojis field found in user data');
+                setEmojis([]); // Set empty array if no data found
                 return;
             }
 
@@ -83,26 +93,50 @@ function EmojiGrid() {
         }
     };
 
-    const handleEmojiClick = (emoji: string) => {
+    const fetchPublicEmojis = async () => {
+        try {
+            const userDoc = await getDoc(doc(db, "userdata", "VVTSS5xcLXgAQbYwB0ijW4Se7pA3"));
+            if (!userDoc.exists()) {
+                setEmojis([]); // Set empty array if no data found
+                return;
+            }
+
+            const data = userDoc.data() as { emojis?: { emoji: string, name: string }[] };
+            if (!data.emojis) {
+                setEmojis([]); // Set empty array if no data found
+                return;
+            }
+
+            setPublicEmojis(data.emojis); // Update state with emojis from Firestore
+        } catch (error) {
+            console.error('Error fetching emojis:', error);
+            // TODO: show error message
+        }
+    };
+
+    const handleEmojiClick = (emoji: { emoji: string, name: string }) => {
 
         if (showAddMenu) {
             // edit emoji
             const index = emojis.indexOf(emoji);
 
-            // if click same emoji, close edit menu
-            if (index == editingIndex) {
-                setEditingIndex(-1);
-                return;
-            }
+            // disabled due to users likeley getting confused
+            // // if click same emoji, close edit menu
+            // if (index == editingIndex) {
+            //     setEditingIndex(-1);
+            //     return;
+            // }
 
             setEditingIndex(index);
             return;
         }
 
-        if (emoji.length > 2) {
-            emoji = `https://cdn.discordapp.com/emojis/${emoji}?size=48`;
+        let emojiText = emoji.emoji;
+
+        if (emojiText.length > 2) {
+            emojiText = `https://cdn.discordapp.com/emojis/${emoji.emoji}?size=48`;
         }
-        navigator.clipboard.writeText(emoji);
+        navigator.clipboard.writeText(emojiText);
         ShowNotification("Copied to clipboard!");
     };
 
@@ -168,9 +202,19 @@ function EmojiGrid() {
 
     return (
         <div>
-            {showAddMenu && <AddEmojiMenu emojis={emojis} setEmojis={setEmojis} />}
-            {editingIndex != -1 && <EditEmojiMenu editingIndex={editingIndex} emojis={emojis} setEmojis={setEmojis} />}
+            {(showAddMenu && editingIndex == -1 ) && <AddEmojiMenu emojis={emojis} setEmojis={setEmojis} setShowAddMenu={setShowAddMenu} />}
+            {editingIndex != -1 && <EditEmojiMenu editingIndex={editingIndex} setEditingIndex={setEditingIndex} emojis={emojis} setEmojis={setEmojis} />}
 
+            <div className="search-box">
+                <input
+                    type="text"
+                    placeholder="Search emojis"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+            </div>
+
+            <h2>My Emojis</h2>
             <div className="emoji-grid">
                 <div
                     className={`emoji-item ${draggingIndex !== null ? 'emoji-item-delete' : 'emoji-item-add'}`}
@@ -185,7 +229,7 @@ function EmojiGrid() {
                 </div>
 
                 {/* Reverse the display order but keep the internal order intact */}
-                {emojis.slice().reverse().map((emoji, index) => {
+                {filteredEmojis.slice().reverse().map((emoji, index) => {
                     const reversedIndex = emojis.length - 1 - index; // Correct index for drag-and-drop
                     return (
                         <div
@@ -197,15 +241,39 @@ function EmojiGrid() {
                             onDragOver={(e) => handleDragOver(e, reversedIndex)}
                             onDragEnd={handleDragEnd}
                         >
-                            {emoji.length <= 2 ? (
-                                emoji
+                            {emoji.emoji.length <= 2 ? (
+                                emoji.emoji
                             ) : (
-                                <img src={`https://cdn.discordapp.com/emojis/${emoji}?size=48`} alt="emoji" />
+                                <img src={`https://cdn.discordapp.com/emojis/${emoji.emoji}?size=48`} alt="emoji" />
                             )}
                         </div>
                     );
                 })}
             </div>
+            
+            {!showAddMenu ? <>
+                <h2>Public Emojis</h2>
+                <div className="emoji-grid">
+                    {filteredEmojisPublic.slice().reverse().map((emoji, index) => {
+                        const reversedIndex = emojis.length - 1 - index; // Correct index for drag-and-drop
+                        return (
+                            <div
+                                key={reversedIndex}
+                                className="emoji-item"
+                                {...(showAddMenu ? { draggable: true } : {})}
+                                onClick={() => handleEmojiClick(emoji)}
+                            >
+                                {emoji.emoji.length <= 2 ? (
+                                    emoji.emoji
+                                ) : (
+                                    <img src={`https://cdn.discordapp.com/emojis/${emoji.emoji}?size=48`} alt="emoji" />
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </> : null}
+
         </div>
     );
 }
@@ -240,17 +308,17 @@ const checkLinkValid = async (emojiID: string, fileType: string) => {
     }
 };
 
-function Click_AddEmojiButton(text: string, { emojis, setEmojis }: { emojis: string[]; setEmojis: (emojis: string[]) => void }) {
+function Click_AddEmojiButton(text: string, { emojis, setEmojis }: { emojis: { emoji: string, name: string }[]; setEmojis: (emojis: { emoji: string, name: string }[]) => void }) {
     const links = text.split(",");
 
-    const newEmojis: string[] = [];
+    const newEmojis: { emoji: string, name: string }[] = [];
 
     // Add each emoji to the grid
     links.forEach(async (link) => {
 
         // if system emoji, add directly
         if (link.length <= 2) {
-            newEmojis.push(link);
+            newEmojis.push({ emoji: link, name: "" });
             return;
         }
 
@@ -280,7 +348,7 @@ function Click_AddEmojiButton(text: string, { emojis, setEmojis }: { emojis: str
         }
 
         // Add the emoji to the grid
-        newEmojis.push(`${emojiID}.${fileType}`);
+        newEmojis.push({ emoji: `${emojiID}.${fileType}`, name: "" });
     });
 
     // Update the state
@@ -299,7 +367,7 @@ function Click_AddEmojiButton(text: string, { emojis, setEmojis }: { emojis: str
 
     // add emoji to firestore (avoid cold start delay / api cost)
 
-    const addEmojiFirestore = async (newEmojis: string[]) => {
+    const addEmojiFirestore = async (newEmojis: { emoji: string, name: string }[]) => {
         try {
             const user = auth.currentUser;
             if (!user) {
@@ -313,7 +381,7 @@ function Click_AddEmojiButton(text: string, { emojis, setEmojis }: { emojis: str
                 return;
             }
 
-            const data = userDoc.data() as { emojis?: string[] };
+            const data = userDoc.data() as { emojis?: { emoji: string, name: string }[] };
             if (!data.emojis) {
                 // create new emojis field if it doesn't exist
                 data.emojis = [];
@@ -335,7 +403,10 @@ function Click_AddEmojiButton(text: string, { emojis, setEmojis }: { emojis: str
     ClearAddEmojiTextbox();
 }
 
-function AddEmojiMenu({ emojis, setEmojis }: { emojis: string[]; setEmojis: (emojis: string[]) => void }) {
+function AddEmojiMenu({ emojis, setEmojis, setShowAddMenu }: { 
+    emojis: { emoji: string, name: string }[];
+    setEmojis: (emojis: { emoji: string, name: string }[]) => void
+    setShowAddMenu: (showAddMenu: boolean) => void}) {
     const [emojiText, setEmojiText] = useState('');
 
     const emojiInputRef = React.useRef<HTMLInputElement>(null);
@@ -346,70 +417,128 @@ function AddEmojiMenu({ emojis, setEmojis }: { emojis: string[]; setEmojis: (emo
     };
 
     return (
-        <div className="addEmojiMenu">
-            <h1>Add Emoji</h1>
-            <span>To get an emoji&apos;s link: Right click in chat, Copy link</span>
-            <br />
-            <input
-                ref={emojiInputRef}
-                onChange={(e) => setEmojiText(e.target.value)}
-                type="text"
-                placeholder="emoji link"
-            />
-            <button
-                onClick={() => Click_AddEmojiButton(emojiText, { emojis, setEmojis })}
-            >Add</button>
+        <div className="menu-section">
+            <h2>Add Emoji</h2>
+            <div className="input-group">
+                <input
+                    type="text"
+                    placeholder="emoji link"
+                    ref={emojiInputRef}
+                    onChange={(e) => setEmojiText(e.target.value)}
+                />
+                <button onClick={() => Click_AddEmojiButton(emojiText, { emojis, setEmojis })}>Add</button>
 
-            <br />
-            <br />
+                <button className="back-button"
+                    onClick={() => {
+                        setShowAddMenu(false);
+                    }}
+                >
+                    Back
+                </button>
+            </div>
+            {/* <br />
             <h1>Edit Emoji</h1>
             <span>Drag and drop to re-order or delete</span><br />
-            <span>Click to rename</span>
+            <span>Click to rename</span> */}
+            <p>To get an emoji&apos;s link: Right-click in chat, Copy link</p>
         </div>
     );
 }
 
 function EditEmojiMenu({
     editingIndex,
+    setEditingIndex,
     emojis,
     setEmojis,
 }: {
     editingIndex: number;
-    emojis: string[];
-    setEmojis: (emojis: string[]) => void;
+    setEditingIndex: (index: number) => void;
+    emojis: { emoji: string; name: string }[];
+    setEmojis: (emojis: { emoji: string; name: string }[]) => void;
 }) {
     const [name, setName] = useState('');
     const currentEmoji = emojis[editingIndex];
 
+    useEffect(() => {
+        // Update the `name` state whenever the editingIndex changes
+        setName(emojis[editingIndex]?.name || '');
+    }, [editingIndex, emojis]);
+
+    const updateEmojiNameInFirestore = async (index: number, newName: string) => {
+        try {
+            const user = auth.currentUser;
+            if (!user) {
+                console.error('No user found!');
+                return;
+            }
+
+            const userDocRef = doc(db, 'userdata', user.uid);
+            const userDoc = await getDoc(userDocRef);
+            if (!userDoc.exists()) {
+                console.error('No user data found!');
+                return;
+            }
+
+            const data = userDoc.data() as { emojis?: { emoji: string; name: string }[] };
+            if (!data.emojis) {
+                console.warn('No emojis field found in user data');
+                return;
+            }
+
+            // Update the specific emoji's name
+            data.emojis[index].name = newName;
+
+            // Save back to Firestore
+            await updateDoc(userDocRef, { emojis: data.emojis });
+
+            // Update local state
+            setEmojis(data.emojis);
+            ShowNotification("Saved");
+        } catch (error) {
+            console.error('Error updating emoji name in Firestore:', error);
+        }
+    };
+
     return (
-        <div className="addEmojiMenu">
-            <h1>Edit Emoji</h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span
-                    style={{
-                        fontSize: '24px',
-                        display: 'inline-block',
-                        textAlign: 'center',
-                        width: '40px',
+        <div className="menu-section">
+            <h2>Edit Emoji</h2>
+
+            
+            {currentEmoji.emoji.length <= 2 ? (
+                                <div className="emoji-text"><span>{currentEmoji.emoji}</span></div>
+                            ) : (
+                                <img src={`https://cdn.discordapp.com/emojis/${currentEmoji.emoji}?size=48`} alt="emoji" className="emoji-image" />
+                            )}
+
+
+            <div className="input-group">
+                <input
+                    onChange={(e) => setName(e.target.value)} // Update name state on input change
+                    type="text"
+                    placeholder="emoji name (for search)"
+                    value={name} // Use the local state for input value
+                />
+                <button
+                    onClick={() => {
+                        const updatedEmojis = [...emojis];
+                        updatedEmojis[editingIndex].name = name;
+                        updateEmojiNameInFirestore(editingIndex, name); // Save to Firestore
+                        setEmojis(updatedEmojis); // Update local state
                     }}
                 >
-                    {currentEmoji}
-                </span>
-                <input
-                    onChange={(e) => setName(e.target.value)}
-                    type="text"
-                    placeholder="name"
-                />
+                    Save
+                </button>
+                <button className="back-button"
+                    onClick={() => {
+                        setEditingIndex(-1);
+                    }}
+                >
+                    Back
+                </button>
             </div>
-            <button
-                onClick={() => {
-                    const updatedEmojis = [...emojis];
-                    updatedEmojis[editingIndex] = name;
-                    setEmojis(updatedEmojis);
-                }}
-            >
-                Update
-            </button>
+
+            <p>To re-order or delete: drag and drop</p>
+            
         </div>
     );
 }
