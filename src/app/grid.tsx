@@ -50,29 +50,13 @@ function EmojiGrid() {
     useEffect(() => {
         fetchEmojisFirestore();
         fetchPublicEmojis();
-
-        // Fetch emojis using cloud functions. Not using this due to cold start delay and cost
-        // const getEmojis = httpsCallable(functions, 'getEmojis');
-        // getEmojis()
-        //     .then((result) => {
-        //         console.log('Emojis fetched successfully:', result);
-        //         const data = result.data as { emojis: string[] };
-        //         setEmojis(data.emojis);
-        //     })
-        //     .catch((error) => {
-        //         console.error('Error fetching emojis:', error);
-        //         // TODO: show error message
-        //     });
     }, []);
 
     // Fetch emojis directly from Firestore to avoid cold start delay
     const fetchEmojisFirestore = async () => {
         try {
             const user = auth.currentUser;
-            if (!user) {
-                console.error('No user found!');
-                return;
-            }
+            if (!user) return;
 
             const userDoc = await getDoc(doc(db, "userdata", user.uid));
             if (!userDoc.exists()) {
@@ -159,17 +143,6 @@ function EmojiGrid() {
         console.log('Reordered emojis:', emojis);
         setDraggingIndex(null);
 
-        // call API
-        // const reorderEmojis = httpsCallable(functions, 'reorderEmojis');
-        // reorderEmojis({ emojis: emojis })
-        //     .then(() => {
-        //         ShowNotification("Saved");
-        //     })
-        //     .catch((error) => {
-        //         console.error('Error reordering emojis:', error);
-        //         // TODO show error message
-        //     });
-
         // update firestore
         reorderFirestore(emojis);
     };
@@ -185,16 +158,6 @@ function EmojiGrid() {
             setEmojis(updatedEmojis);
             setDraggingIndex(null);
 
-            // const deleteEmoji = httpsCallable(functions, 'removeEmojis');
-            // deleteEmoji({ emojis: [emojis[draggingIndex]] }) // Send only the specific emoji to delete
-            //     .then(() => {
-            //         ShowNotification("Saved");
-            //     })
-            //     .catch((error) => {
-            //         console.error('Error deleting emoji:', error);
-            //         // TODO show error message
-            //     });
-
             // update firestore
             reorderFirestore(updatedEmojis);
         }
@@ -202,7 +165,7 @@ function EmojiGrid() {
 
     return (
         <div>
-            {(showAddMenu && editingIndex == -1 ) && <AddEmojiMenu emojis={emojis} setEmojis={setEmojis} setShowAddMenu={setShowAddMenu} />}
+            {(showAddMenu && editingIndex == -1) && <AddEmojiMenu emojis={emojis} setEmojis={setEmojis} setShowAddMenu={setShowAddMenu} />}
             {editingIndex != -1 && <EditEmojiMenu editingIndex={editingIndex} setEditingIndex={setEditingIndex} emojis={emojis} setEmojis={setEmojis} />}
 
             <div className="search-box">
@@ -214,43 +177,51 @@ function EmojiGrid() {
                 />
             </div>
 
-            <h2>My Emojis</h2>
-            <div className="emoji-grid">
-                <div
-                    className={`emoji-item ${draggingIndex !== null ? 'emoji-item-delete' : 'emoji-item-add'}`}
-                    onClick={() => {
-                        setEditingIndex(-1);
-                        setShowAddMenu(!showAddMenu)
-                    }}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={handleDropOnDelete}
-                >
-                    {draggingIndex !== null ? '🗑️' : '📝'}
+
+
+            {auth.currentUser != null ? <>
+                <h2>My Emojis</h2>
+                <div className="emoji-grid">
+                    <div
+                        className={`emoji-item ${draggingIndex !== null ? 'emoji-item-delete' : 'emoji-item-add'}`}
+                        onClick={() => {
+                            setEditingIndex(-1);
+                            setShowAddMenu(!showAddMenu)
+                        }}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={handleDropOnDelete}
+                    >
+                        {draggingIndex !== null ? '🗑️' : '📝'}
+                    </div>
+
+                    {/* Reverse the display order but keep the internal order intact */}
+                    {filteredEmojis.slice().reverse().map((emoji, index) => {
+                        const reversedIndex = emojis.length - 1 - index; // Correct index for drag-and-drop
+                        return (
+                            <div
+                                key={reversedIndex}
+                                className="emoji-item"
+                                {...(showAddMenu ? { draggable: true } : {})}
+                                onClick={() => handleEmojiClick(emoji)}
+                                onDragStart={() => { if (showAddMenu) handleDragStart(reversedIndex) }}
+                                onDragOver={(e) => handleDragOver(e, reversedIndex)}
+                                onDragEnd={handleDragEnd}
+                            >
+                                {emoji.emoji.length <= 2 ? (
+                                    emoji.emoji
+                                ) : (
+                                    <img src={`https://cdn.discordapp.com/emojis/${emoji.emoji}?size=48`} alt="emoji" />
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
 
-                {/* Reverse the display order but keep the internal order intact */}
-                {filteredEmojis.slice().reverse().map((emoji, index) => {
-                    const reversedIndex = emojis.length - 1 - index; // Correct index for drag-and-drop
-                    return (
-                        <div
-                            key={reversedIndex}
-                            className="emoji-item"
-                            {...(showAddMenu ? { draggable: true } : {})}
-                            onClick={() => handleEmojiClick(emoji)}
-                            onDragStart={() => { if (showAddMenu) handleDragStart(reversedIndex) }}
-                            onDragOver={(e) => handleDragOver(e, reversedIndex)}
-                            onDragEnd={handleDragEnd}
-                        >
-                            {emoji.emoji.length <= 2 ? (
-                                emoji.emoji
-                            ) : (
-                                <img src={`https://cdn.discordapp.com/emojis/${emoji.emoji}?size=48`} alt="emoji" />
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-            
+
+            </> : <p>Log in to add your own emojis</p>}
+
+
+
             {!showAddMenu ? <>
                 <h2>Public Emojis</h2>
                 <div className="emoji-grid">
@@ -318,6 +289,8 @@ function Click_AddEmojiButton(text: string, { emojis, setEmojis }: { emojis: { e
 
         // if system emoji, add directly
         if (link.length <= 2) {
+            if (link.length == 0) return;
+
             newEmojis.push({ emoji: link, name: "" });
             return;
         }
@@ -353,17 +326,6 @@ function Click_AddEmojiButton(text: string, { emojis, setEmojis }: { emojis: { e
 
     // Update the state
     setEmojis([...emojis, ...newEmojis]);
-
-    // call API
-    // const addEmojis = httpsCallable(functions, 'addEmojis');
-    // addEmojis({ emojis: newEmojis })
-    //     .then(() => {
-    //         ShowNotification("Saved");
-    //     })
-    //     .catch((error) => {
-    //         console.error('Error adding emojis:', error);
-    //         // TODO show error message
-    //     });
 
     // add emoji to firestore (avoid cold start delay / api cost)
 
@@ -403,10 +365,11 @@ function Click_AddEmojiButton(text: string, { emojis, setEmojis }: { emojis: { e
     ClearAddEmojiTextbox();
 }
 
-function AddEmojiMenu({ emojis, setEmojis, setShowAddMenu }: { 
+function AddEmojiMenu({ emojis, setEmojis, setShowAddMenu }: {
     emojis: { emoji: string, name: string }[];
     setEmojis: (emojis: { emoji: string, name: string }[]) => void
-    setShowAddMenu: (showAddMenu: boolean) => void}) {
+    setShowAddMenu: (showAddMenu: boolean) => void
+}) {
     const [emojiText, setEmojiText] = useState('');
 
     const emojiInputRef = React.useRef<HTMLInputElement>(null);
@@ -503,13 +466,11 @@ function EditEmojiMenu({
         <div className="menu-section">
             <h2>Edit Emoji</h2>
 
-            
             {currentEmoji.emoji.length <= 2 ? (
-                                <div className="emoji-text"><span>{currentEmoji.emoji}</span></div>
-                            ) : (
-                                <img src={`https://cdn.discordapp.com/emojis/${currentEmoji.emoji}?size=48`} alt="emoji" className="emoji-image" />
-                            )}
-
+                <div className="emoji-text"><span>{currentEmoji.emoji}</span></div>
+            ) : (
+                <img src={`https://cdn.discordapp.com/emojis/${currentEmoji.emoji}?size=48`} alt="emoji" className="emoji-image" />
+            )}
 
             <div className="input-group">
                 <input
@@ -538,7 +499,7 @@ function EditEmojiMenu({
             </div>
 
             <p>To re-order or delete: drag and drop</p>
-            
+
         </div>
     );
 }

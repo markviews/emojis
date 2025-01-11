@@ -28,13 +28,92 @@ body {
 /* Header */
 .header {
   display: flex;
-  height: 65px;
   justify-content: space-between;
   align-items: center;
   padding: 1rem 2rem;
-  background-color: #2f3136; /* Darker gray for the header */
+  border-bottom: 1px solid #aaa;
   color: var(--foreground);
+  margin-bottom: 20px;
 }
+
+/* General Layout Adjustments */
+.page-wrapper {
+  width: 100%;
+  padding: 0 20%;  /* Add 20% padding to left and right for larger screens */
+  box-sizing: border-box;  /* Ensure padding is included in the width */
+}
+
+/* Ensure the content does not overflow */
+.content {
+  width: 100%;
+  padding: 20px;
+  background-color: #2f3136;
+  outline: 1px solid #525151;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Media query for mobile screens */
+@media (max-width: 768px) {
+  .page-wrapper {
+    padding: 0;  /* Remove padding on mobile */
+  }
+
+  .content {
+    padding: 10px;  /* Optional: Reduce content padding on mobile */
+  }
+}
+
+/* Tabs in Header */
+.tabs {
+  display: flex; /* Arrange tabs horizontally */
+  gap: 1rem; /* Add space between tabs */
+  align-items: center; /* Align tabs vertically */
+  margin-left: 1rem; /* Add a small margin to separate from the title */
+}
+
+.tab {
+  position: relative;
+  font-size: 16px;
+  color: #b9bbbe; /* Gray text color */
+  cursor: pointer;
+  transition: color 0.2s ease-in-out;
+
+}
+
+.tab:hover {
+  color: white;
+}
+
+.tab::after {
+  content: '';
+  position: absolute;
+  bottom: -2px; /* Adjust underline position */
+  left: 0;
+  height: 2px;
+  width: 0;
+  background-color: var(--accent);
+  transition: width 0.3s ease-in-out;
+}
+
+.tab:hover::after {
+  width: 100%;
+}
+
+.tab.active {
+  color: white;
+}
+
+.tab.active::after {
+  width: 100%;
+}
+
+.button-container {
+  display: flex; /* Arrange buttons horizontally */
+  gap: 1rem; /* Add spacing between buttons */
+  align-items: center; /* Align buttons vertically */
+}
+
 
 .title {
   font-size: 1.5rem;
@@ -46,7 +125,7 @@ body {
   gap: 1rem;
 }
 
-.button {
+button {
   padding: 0.5rem 1rem;
   font-size: 1rem;
   color: var(--button-text);
@@ -59,14 +138,6 @@ body {
 
 .button:hover {
   background-color: #4752c4; /* Slightly darker shade on hover */
-}
-
-/* Main Content */
-.content {
-  flex-grow: 1;
-  display: block;
-  padding: 20px;
-  /* background-color: #c04343; */
 }
 
 /* Emoji grid */
@@ -221,43 +292,6 @@ body {
   height: calc(100vh - 65px); /* Full height minus header */
   background-color: #2f3136;
   padding: 20px;
-}
-
-.tabs {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.tab {
-  font-size: 16px;
-  padding: 10px;
-  color: #b9bbbe; /* Gray text color */
-  cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
-  border-radius: 4px;
-}
-
-.tab:hover {
-  background-color: #3a3c43; /* Hover effect */
-}
-
-.tab.active {
-  background-color: #3ba55d; /* Discord green */
-  color: white; /* White text for active tab */
-}
-
-.tab-content {
-  flex-grow: 1;
-  margin-top: 20px;
-  color: white;
-  font-size: 14px;
-  padding: 10px;
-  background-color: #36393f; /* Dark background for content area */
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 /* Search Box */

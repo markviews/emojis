@@ -27,10 +27,11 @@ export default function FirebaseHandler({ activeTab, setActiveTab }: { activeTab
                 setActiveTab('emojis');
             }
             
-        } else {
-            console.log("Auth state changed to null");
-            setActiveTab('login');
-        }
+        } 
+        // else {
+        //     console.log("Auth state changed to null");
+        //     setActiveTab('login');
+        // }
     });
 
     return null;
