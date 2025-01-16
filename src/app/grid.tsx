@@ -187,6 +187,7 @@ function EmojiGrid({
             const updatedEmojis = emojis.filter((_, index) => index !== draggingIndex);
             setEmojis(updatedEmojis);
             setDraggingIndex(null);
+            setEditingIndex(-1);
 
             // update firestore
             reorderFirestore(updatedEmojis);
@@ -367,6 +368,9 @@ function Click_AddEmojiButton(text: string, { emojis, setEmojis }: { emojis: { e
             console.log('Invalid ID or link:', link);
             return;
         }
+        
+        // Decode URI-encoded characters in the name
+        name = decodeURIComponent(name);
 
         // if unknown file type, try to figure it out
         if (fileType === "") {
