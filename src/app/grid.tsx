@@ -93,7 +93,7 @@ function EmojiGrid({
     };
 
     const fetchPublicEmojis = async () => {
-        
+
         // wait a bit for things to load
         await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -243,12 +243,24 @@ function EmojiGrid({
                 </div>
 
 
-            </> : <p
-                onClick={() => setActiveTab('login')}
-                style={{ cursor: 'pointer', color: 'blue', textDecoration: 'underline' }}
-            >
-                Log in to add your own emojis
-            </p>}
+            </> : <p>
+                <span
+                    onClick={() => setActiveTab('login')}
+                    style={{
+                        cursor: 'pointer',
+                        color: '#007ACC', // Softer blue
+                        textDecoration: 'none',
+                        fontWeight: '500',
+                        transition: 'color 0.3s ease',
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.color = '#005F99')}
+                    onMouseOut={(e) => (e.currentTarget.style.color = '#007ACC')}
+                >
+                    Log in
+                </span>{' '}
+                to add your own emojis
+            </p>
+            }
 
 
 
