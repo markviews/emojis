@@ -5,13 +5,22 @@ import { getDoc, doc, updateDoc } from "firebase/firestore";
 
 let ClearAddEmojiTextbox: () => void = () => { };
 
-function EmojiGrid() {
+function EmojiGrid({
+    setActiveTab,
+}: {
+    setActiveTab: (tab: string) => void;
+}) {
     const [searchQuery, setSearchQuery] = useState("");
     const [emojis, setEmojis] = useState<{ emoji: string, name: string }[]>([]);
     const [publicEmojis, setPublicEmojis] = useState<{ emoji: string, name: string }[]>([]);
     const [showAddMenu, setShowAddMenu] = useState(false);
     const [editingIndex, setEditingIndex] = useState(-1);
     const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+
+    // localstorage settings
+    const [showEditButton] = useState(() => { return JSON.parse(localStorage.getItem('showEditButton') || 'true'); });
+    const [showPublicEmojis] = useState(() => { return JSON.parse(localStorage.getItem('showPublicEmojis') || 'true'); });
+    const [showSearch] = useState(() => { return JSON.parse(localStorage.getItem('showSearch') || 'true'); });
 
     const filteredEmojis = emojis.filter((emoji) =>
         emoji.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -49,11 +58,17 @@ function EmojiGrid() {
     // Fetch emojis from the server
     useEffect(() => {
         fetchEmojisFirestore();
-        fetchPublicEmojis();
-    }, []);
+
+        if (showPublicEmojis)
+            fetchPublicEmojis();
+    });
 
     // Fetch emojis directly from Firestore to avoid cold start delay
     const fetchEmojisFirestore = async () => {
+
+        // wait a bit for things to load
+        await new Promise(resolve => setTimeout(resolve, 500));
+
         try {
             const user = auth.currentUser;
             if (!user) return;
@@ -78,6 +93,10 @@ function EmojiGrid() {
     };
 
     const fetchPublicEmojis = async () => {
+        
+        // wait a bit for things to load
+        await new Promise(resolve => setTimeout(resolve, 500));
+
         try {
             const userDoc = await getDoc(doc(db, "userdata", "VVTSS5xcLXgAQbYwB0ijW4Se7pA3"));
             if (!userDoc.exists()) {
@@ -98,7 +117,7 @@ function EmojiGrid() {
         }
     };
 
-    const handleEmojiClick = (emoji: { emoji: string, name: string }) => {
+    const handleEmojiClick = async (emoji: { emoji: string, name: string }) => {
 
         if (showAddMenu) {
             // edit emoji
@@ -120,6 +139,7 @@ function EmojiGrid() {
         if (emojiText.length > 2) {
             emojiText = `https://cdn.discordapp.com/emojis/${emoji.emoji}?size=48`;
         }
+
         navigator.clipboard.writeText(emojiText);
         ShowNotification("Copied to clipboard!");
     };
@@ -168,31 +188,34 @@ function EmojiGrid() {
             {(showAddMenu && editingIndex == -1) && <AddEmojiMenu emojis={emojis} setEmojis={setEmojis} setShowAddMenu={setShowAddMenu} />}
             {editingIndex != -1 && <EditEmojiMenu editingIndex={editingIndex} setEditingIndex={setEditingIndex} emojis={emojis} setEmojis={setEmojis} />}
 
-            <div className="search-box">
-                <input
-                    type="text"
-                    placeholder="Search emojis"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
-            </div>
-
-
+            {showSearch &&
+                <div className="search-box">
+                    <input
+                        type="text"
+                        placeholder="Search emojis"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+            }
 
             {auth.currentUser != null ? <>
                 <h2>My Emojis</h2>
                 <div className="emoji-grid">
-                    <div
-                        className={`emoji-item ${draggingIndex !== null ? 'emoji-item-delete' : 'emoji-item-add'}`}
-                        onClick={() => {
-                            setEditingIndex(-1);
-                            setShowAddMenu(!showAddMenu)
-                        }}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={handleDropOnDelete}
-                    >
-                        {draggingIndex !== null ? '🗑️' : '📝'}
-                    </div>
+
+                    {showEditButton &&
+                        <div
+                            className={`emoji-item ${draggingIndex !== null ? 'emoji-item-delete' : 'emoji-item-add'}`}
+                            onClick={() => {
+                                setEditingIndex(-1);
+                                setShowAddMenu(!showAddMenu)
+                            }}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={handleDropOnDelete}
+                        >
+                            {draggingIndex !== null ? '🗑️' : '📝'}
+                        </div>
+                    }
 
                     {/* Reverse the display order but keep the internal order intact */}
                     {filteredEmojis.slice().reverse().map((emoji, index) => {
@@ -202,7 +225,9 @@ function EmojiGrid() {
                                 key={reversedIndex}
                                 className="emoji-item"
                                 {...(showAddMenu ? { draggable: true } : {})}
-                                onClick={() => handleEmojiClick(emoji)}
+                                onClick={() => {
+                                    handleEmojiClick(emoji);
+                                }}
                                 onDragStart={() => { if (showAddMenu) handleDragStart(reversedIndex) }}
                                 onDragOver={(e) => handleDragOver(e, reversedIndex)}
                                 onDragEnd={handleDragEnd}
@@ -218,11 +243,16 @@ function EmojiGrid() {
                 </div>
 
 
-            </> : <p>Log in to add your own emojis</p>}
+            </> : <p
+                onClick={() => setActiveTab('login')}
+                style={{ cursor: 'pointer', color: 'blue', textDecoration: 'underline' }}
+            >
+                Log in to add your own emojis
+            </p>}
 
 
 
-            {!showAddMenu ? <>
+            {showPublicEmojis && !showAddMenu ? <>
                 <h2>Public Emojis</h2>
                 <div className="emoji-grid">
                     {filteredEmojisPublic.slice().reverse().map((emoji, index) => {
@@ -232,7 +262,12 @@ function EmojiGrid() {
                                 key={reversedIndex}
                                 className="emoji-item"
                                 {...(showAddMenu ? { draggable: true } : {})}
-                                onClick={() => handleEmojiClick(emoji)}
+                                onClick={() => {
+                                    handleEmojiClick(emoji);
+                                }}
+                                onDragStart={() => { if (showAddMenu) handleDragStart(reversedIndex) }}
+                                onDragOver={(e) => handleDragOver(e, reversedIndex)}
+                                onDragEnd={handleDragEnd}
                             >
                                 {emoji.emoji.length <= 2 ? (
                                     emoji.emoji
@@ -297,13 +332,15 @@ function Click_AddEmojiButton(text: string, { emojis, setEmojis }: { emojis: { e
 
         let emojiID = "";
         let fileType = "";
+        let name = "";
 
-        // Regular expression to capture emoji ID and file type separately (full URL, just ID.extension, or just ID)
-        const regex = /(?:\/emojis\/|^)(\d+)(?:\.(\w+))?(?:\?|$)/;
+        // Regular expression to capture emoji ID, file type, and name separately
+        const regex = /(?:\/emojis\/|^)(\d+)(?:\.(\w+))?(?:\?[^#]*name=([^&#]*))?(?:[#&]|$)/;
         const match = link.trim().match(regex);
         if (match) {
             emojiID = match[1];
             fileType = match[2] || "";
+            name = match[3] || "";
         } else {
             console.log('Invalid ID or link:', link);
             return;
@@ -321,7 +358,7 @@ function Click_AddEmojiButton(text: string, { emojis, setEmojis }: { emojis: { e
         }
 
         // Add the emoji to the grid
-        newEmojis.push({ emoji: `${emojiID}.${fileType}`, name: "" });
+        newEmojis.push({ emoji: `${emojiID}.${fileType}`, name: name });
     });
 
     // Update the state

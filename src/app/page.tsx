@@ -6,16 +6,6 @@ import FirebaseHandler from './firebase';
 import SettingsPage from "./settings";
 import Notification from "./notification";
 
-/*
-  Cool ideas. Possibly impliment:
-  - Emoji groups
-  - Hide (close tab) groups including public group
-  - Share emoji groups with other users
-  - Analytics on emoji usage
-  - Stickers / gifs
-  
-*/
-
 export default function Home() {
   const [activeTab, setActiveTab] = useState('emojis');
 
@@ -32,8 +22,8 @@ export default function Home() {
             <Header activeTab={activeTab} setActiveTab={setActiveTab} />
             <div className="flex flex-grow">
               <div className="content">
-                {activeTab === "emojis" && <EmojiGrid />}
-                {activeTab === "settings" && <SettingsPage />}
+                {activeTab === "emojis" && <EmojiGrid setActiveTab={setActiveTab} />}
+                {activeTab === "settings" && <SettingsPage setActiveTab={setActiveTab} />}
               </div>
             </div>
           </div>
