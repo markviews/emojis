@@ -6,16 +6,27 @@ function SettingsPage({
 }: {
     setActiveTab: (tab: string) => void;
 }) {
-    const [showEditButton, setShowEditButton] = useState(() => {
-        return JSON.parse(localStorage.getItem('showEditButton') || 'true');
-    });
-    const [showPublicEmojis, setShowPublicEmojis] = useState(() => {
-        return JSON.parse(localStorage.getItem('showPublicEmojis') || 'true');
-    });
+    const [showEditButton, setShowEditButton] = useState(true);
+    const [showPublicEmojis, setShowPublicEmojis] = useState(true);
+    const [showSearch, setShowSearch] = useState(true);
 
-    const [showSearch, setShowSearch] = useState(() => {
-        return JSON.parse(localStorage.getItem('showSearch') || 'true');
-    });
+    useEffect(() => {
+        const storedShowEditButton = localStorage.getItem('showEditButton');
+        const storedShowPublicEmojis = localStorage.getItem('showPublicEmojis');
+        const storedShowSearch = localStorage.getItem('showSearch');
+
+        if (storedShowEditButton !== null) {
+            setShowEditButton(JSON.parse(storedShowEditButton));
+        }
+
+        if (storedShowPublicEmojis !== null) {
+            setShowPublicEmojis(JSON.parse(storedShowPublicEmojis));
+        }
+
+        if (storedShowSearch !== null) {
+            setShowSearch(JSON.parse(storedShowSearch));
+        }
+    }, []);
 
     const handleToggle = (
         key: string,

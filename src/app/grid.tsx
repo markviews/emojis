@@ -18,9 +18,19 @@ function EmojiGrid({
     const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
 
     // localstorage settings
-    const [showEditButton] = useState(() => { return JSON.parse(localStorage.getItem('showEditButton') || 'true'); });
-    const [showPublicEmojis] = useState(() => { return JSON.parse(localStorage.getItem('showPublicEmojis') || 'true'); });
-    const [showSearch] = useState(() => { return JSON.parse(localStorage.getItem('showSearch') || 'true'); });
+    const [showEditButton, setShowEditButton] = useState(true);
+    const [showPublicEmojis, setShowPublicEmojis] = useState(true);
+    const [showSearch, setShowSearch] = useState(true);
+
+    useEffect(() => {
+        const storedShowEditButton = localStorage.getItem('showEditButton');
+        const storedShowPublicEmojis = localStorage.getItem('showPublicEmojis');
+        const storedShowSearch = localStorage.getItem('showSearch');
+
+        setShowEditButton(storedShowEditButton !== null ? JSON.parse(storedShowEditButton) : true);
+        setShowPublicEmojis(storedShowPublicEmojis !== null ? JSON.parse(storedShowPublicEmojis) : true);
+        setShowSearch(storedShowSearch !== null ? JSON.parse(storedShowSearch) : true);
+    }, []);
 
     const filteredEmojis = emojis.filter((emoji) =>
         emoji.name.toLowerCase().includes(searchQuery.toLowerCase())
