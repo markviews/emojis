@@ -56,7 +56,7 @@ function Header({
           Settings
         </div>
       </div>
-      <h1 className="title">Emoji Manager</h1>
+      <h1 className="title">Clipcord</h1>
     </header>
   );
 }

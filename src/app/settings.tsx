@@ -84,16 +84,21 @@ function SettingsPage({
             </div>
 
             <br />
-            Signed in as: {auth.currentUser?.email}
-            <br />
-            <button
-                onClick={() => {
-                    auth.signOut();
-                    setActiveTab('login');
-                }}
-            >
-                Sign out
-            </button>
+
+            {auth.currentUser && <>
+                Signed in as: {auth.currentUser?.email}
+                <br />
+                <button
+                    onClick={() => {
+                        auth.signOut();
+                        setActiveTab('login');
+                    }}
+                >
+                    Sign out
+                </button>
+            </>}
+
+            
         </div>
     );
 }
