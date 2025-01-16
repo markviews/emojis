@@ -357,18 +357,21 @@ function Click_AddEmojiButton(text: string, { emojis, setEmojis }: { emojis: { e
         let fileType = "";
         let name = "";
 
-        // Regular expression to capture emoji ID, file type, and name separately
-        const regex = /(?:\/emojis\/|^)(\d+)(?:\.(\w+))?(?:\?[^#]*name=([^&#]*))?(?:[#&]|$)/;
-        const match = link.trim().match(regex);
-        if (match) {
-            emojiID = match[1];
-            fileType = match[2] || "";
-            name = match[3] || "";
-        } else {
-            console.log('Invalid ID or link:', link);
-            return;
-        }
-        
+        // Parse the URL using URL API
+        const url = new URL(link);
+        const pathname = url.pathname; // /emojis/{emojiID}.{fileType}
+        const queryParams = new URLSearchParams(url.search); // query string parameters
+
+        // Extract emoji ID and file type from the pathname
+        const pathParts = pathname.split('/');
+        const emojiDetails = pathParts[pathParts.length - 1].split('.'); // Get file name part
+
+        emojiID = emojiDetails[0]; // Emoji ID
+        fileType = emojiDetails[1] || ""; // File type (gif, webp, etc.)
+
+        // Extract name from query parameters if available
+        name = queryParams.get('name') || "";
+
         // Decode URI-encoded characters in the name
         name = decodeURIComponent(name);
 
@@ -424,8 +427,11 @@ function Click_AddEmojiButton(text: string, { emojis, setEmojis }: { emojis: { e
         }
     };
 
-    addEmojiFirestore(newEmojis);
-    ClearAddEmojiTextbox();
+    if (newEmojis.length > 0) {
+        addEmojiFirestore(newEmojis);
+        ClearAddEmojiTextbox();
+    }
+    
 }
 
 function AddEmojiMenu({ emojis, setEmojis, setShowAddMenu }: {
